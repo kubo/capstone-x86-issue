@@ -6,7 +6,28 @@ on:
 jobs:
   test:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolset:
+          - 14.35.32215
+          - 14.36.32532
     steps:
-    - uses: actions/checkout@v3
-    - run: test.bat
-      shell: cmd
+      - name: Checkout capstone with debug-print
+        uses: actions/checkout@v3
+        with:
+          repository: kubo/capstone
+          ref: debug-print
+          path: capstone
+      - name: Use MSVC x86 ${{ matrix.toolset }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+          toolset: ${{ matrix.toolset }}
+      - name: Build cstool.exe
+        run: |
+          cmake capstone -B build -G "NMake Makefiles" -DCAPSTONE_BUILD_TESTS=OFF -DCAPSTONE_ARCHITECTURE_DEFAULT=OFF -DCAPSTONE_X86_SUPPORT=ON
+          cmake --build build
+      - name: Run cstool.exe
+        run: |
+          build\cstool.exe x32 "55 8b ec"
